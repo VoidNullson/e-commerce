@@ -1,12 +1,11 @@
 import type { Config } from 'tailwindcss'
-// Fix: Use an ES module import instead of CommonJS require.
 import tailwindcssAnimate from 'tailwindcss-animate'
 
 const config: Config = {
   content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
     './lib/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
@@ -22,4 +21,5 @@ const config: Config = {
   },
   plugins: [tailwindcssAnimate],
 }
+
 export default config
