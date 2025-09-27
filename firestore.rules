@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.platformRole == 'superadmin';
+    }
+
+    function tenantRole(tid) {
+      return isSignedIn() ? request.auth.token.tenants[tid] : null;
+    }
+
+    function hasTenantAccess(tid) {
+      return isSuperAdmin() || tenantRole(tid) in ['owner', 'manager', 'staff'];
+    }
+
+    function canWriteProducts(tid) {
+      return isSuperAdmin() || tenantRole(tid) in ['owner', 'manager'];
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if hasTenantAccess(tenantId);
+      allow write: if isSuperAdmin();
+
+      match /stores/{storeId} {
+        allow read: if true;
+        allow write: if hasTenantAccess(tenantId);
+      }
+
+      match /products/{productId} {
+        allow read: if true;
+        allow write: if canWriteProducts(tenantId);
+      }
+
+      match /orders/{orderId} {
+        allow read: if hasTenantAccess(tenantId);
+        allow write: if hasTenantAccess(tenantId);
+      }
+
+      match /customers/{customerId} {
+        allow read: if hasTenantAccess(tenantId);
+        allow write: if hasTenantAccess(tenantId);
+      }
+
+      match /carts/{cartId} {
+        allow read, write: if true;
+      }
+
+      match /themes/{themeId} {
+        allow read: if true;
+        allow write: if canWriteProducts(tenantId);
+      }
+    }
+
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
