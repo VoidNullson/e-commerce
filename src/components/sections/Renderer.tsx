@@ -1,28 +1,46 @@
-import type { ThemeDocument, ThemeSection } from '@/lib/firestore'
-import { fallbackSection, sectionRegistry } from './registry'
+// "use client";
+// import { ThemeSection, ThemeTokenSet } from "@/types/theme";
+// import * as R from "./registry";
 
-export function Renderer({ theme }: { theme: ThemeDocument | null }) {
-  if (!theme) {
-    return (
-      <div className="container py-16">
-        <p className="text-muted-foreground">No theme has been published yet.</p>
-      </div>
-    )
-  }
+// type RendererProps = {
+// 	sections: ThemeSection[];
+// 	tokens?: ThemeTokenSet;
+// };
 
-  const tokens = theme.tokens ?? {}
-  const sections = theme.sections ?? []
+// export function Renderer({ sections, tokens }: RendererProps) {
+// 	return (
+// 		<main
+// 			style={{ ["--brand" as any]: tokens?.colors?.primary ?? "#00d4ff" }}
+// 			className="min-h-screen"
+// 		>
+// 			{sections.map((s, i) => {
+// 				const Cmp = (R as any)[s.type] ?? R.fallbackSection;
+// 				return <Cmp key={i} {...(s.props || {})} />;
+// 			})}
+// 		</main>
+// 	);
+// }
 
-  return (
-    <div
-      style={{
-        ['--brand' as string]: tokens.colors?.brand ?? 'var(--brand)',
-      }}
-    >
-      {sections.map((section: ThemeSection, index) => {
-        const Component = sectionRegistry[section.type] ?? fallbackSection
-        return <Component key={`${section.type}-${index}`} tokens={tokens} data={section.props as Record<string, unknown>} />
-      })}
-    </div>
-  )
+
+"use client";
+import { registry, Fallback } from "./registry";
+import type { ThemeSection, ThemeTokenSet } from "@/types/theme";
+
+const pick = (type?: string) => (type ?? "").trim();
+
+type RendererProps = { sections: ThemeSection[]; tokens?: ThemeTokenSet };
+
+export function Renderer({ sections, tokens }: RendererProps) {
+	return (
+		<main
+			style={{ ["--brand" as any]: tokens?.colors?.primary ?? "#00d4ff" }}
+			className="min-h-screen"
+		>
+			{sections.map((s, i) => {
+				const key = pick(s.type);
+				const Cmp = (registry as any)[key] ?? Fallback;
+				return <Cmp key={i} {...(s.props ?? {})} type={s.type} />;
+			})}
+		</main>
+	);
 }

@@ -1,33 +1,44 @@
-// NOTE: Firebase Admin SDK singleton for server-side usage (Next.js App Router & Cloud Functions).
-import { readFileSync } from 'node:fs'
-import { getApps, initializeApp, cert, type AppOptions } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
-import { getFirestore } from 'firebase-admin/firestore'
+import {
+	getApps,
+	initializeApp,
+	applicationDefault,
+	cert,
+	App,
+} from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
+import fs from "node:fs";
+import path from "node:path";
 
-function buildAdminConfig(): AppOptions {
-  const projectId = process.env.FIREBASE_PROJECT_ID
-  const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS
+const projectId = process.env.FIREBASE_PROJECT_ID;
 
-  if (!credentials) {
-    return { projectId }
-  }
-
-  try {
-    const json = credentials.trim().startsWith('{')
-      ? JSON.parse(credentials)
-      : JSON.parse(readFileSync(credentials, 'utf8'))
-
-    return {
-      credential: cert(json),
-      projectId: json.project_id ?? projectId,
-    }
-  } catch (error) {
-    console.warn('Failed to parse GOOGLE_APPLICATION_CREDENTIALS; falling back to default credentials', error)
-    return { projectId }
-  }
+function resolveCred() {
+	const p = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+	if (p) {
+		const abs = path.isAbsolute(p) ? p : path.join(process.cwd(), p);
+		if (fs.existsSync(abs)) {
+			process.env.GOOGLE_APPLICATION_CREDENTIALS = abs; // ensure absolute path for ADC
+			return applicationDefault();
+		} else {
+			console.warn(
+				"[firebase.admin] Service account path not found:",
+				abs
+			);
+		}
+	}
+	// In GCP, ADC is provided automatically; locally we still try ADC
+	return applicationDefault();
 }
 
-const adminApp = getApps()[0] ?? initializeApp(buildAdminConfig())
+let app: App;
+if (!getApps().length) {
+	app = initializeApp({
+		credential: resolveCred(),
+		projectId, // keep explicit for local dev
+	});
+} else {
+	app = getApps()[0]!;
+}
 
-export const adminAuth = getAuth(adminApp)
-export const adminDb = getFirestore(adminApp)
+export const adminDb = getFirestore(app);
+export const adminAuth = getAuth(app);
